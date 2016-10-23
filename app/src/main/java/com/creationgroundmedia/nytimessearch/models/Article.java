@@ -1,10 +1,12 @@
 package com.creationgroundmedia.nytimessearch.models;
 
 
+import android.os.Parcel;
+import android.os.Parcelable;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.parceler.Parcel;
 
 import java.util.ArrayList;
 
@@ -12,8 +14,7 @@ import java.util.ArrayList;
  * Created by geo on 10/17/16.
  */
 
-@Parcel
-public class Article {
+public class Article implements Parcelable {
     String webUrl;
     String snippet;
     String imageUrl;
@@ -72,4 +73,36 @@ public class Article {
     public String toString() {
         return "Article: " + getHeadline() + getSnippet();
     }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeString(this.webUrl);
+        dest.writeString(this.snippet);
+        dest.writeString(this.imageUrl);
+        dest.writeString(this.headline);
+    }
+
+    protected Article(Parcel in) {
+        this.webUrl = in.readString();
+        this.snippet = in.readString();
+        this.imageUrl = in.readString();
+        this.headline = in.readString();
+    }
+
+    public static final Parcelable.Creator<Article> CREATOR = new Parcelable.Creator<Article>() {
+        @Override
+        public Article createFromParcel(Parcel source) {
+            return new Article(source);
+        }
+
+        @Override
+        public Article[] newArray(int size) {
+            return new Article[size];
+        }
+    };
 }

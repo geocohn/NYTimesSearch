@@ -1,7 +1,10 @@
 package com.creationgroundmedia.nytimessearch.activities;
 
 import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.LinearLayoutManager;
@@ -9,6 +12,7 @@ import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.SearchView;
 import android.support.v7.widget.StaggeredGridLayoutManager;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 
@@ -24,6 +28,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Set;
 
 import cz.msebera.android.httpclient.Header;
 import cz.msebera.android.httpclient.util.TextUtils;
@@ -31,6 +36,7 @@ import cz.msebera.android.httpclient.util.TextUtils;
 public class SearchActivity extends AppCompatActivity {
 
     private static final String QUERY_STRING = "query_string";
+    private static final String LOG_TAG = SearchActivity.class.getSimpleName();
     private MenuItem mSearchMenu;
     private SearchView mSearchView;
     private ArrayList<Article> mArticles;
@@ -98,14 +104,41 @@ public class SearchActivity extends AppCompatActivity {
         super.onSaveInstanceState(outState);
     }
 
-    private void doSearch(String query, int page) {
+    private void doSearch(String query, final int page) {
         AsyncHttpClient client = new AsyncHttpClient();
         String url = "https://api.nytimes.com/svc/search/v2/articlesearch.json";
         RequestParams params = new RequestParams();
         params.put("api-key", "a51f768c4a2146e393768e1758941ef3");
         params.put("page", page);
         params.put("q", query);
+        String newsDesks = getNewsDesks();
+        if (!TextUtils.isEmpty(newsDesks)) {
+            params.put("fq", "news_desk:(" + newsDesks + ")");
+        }
 
+        String sortOrder = getSortOrder();
+        if (!TextUtils.isEmpty(sortOrder) && sortOrder.compareTo("relevance") != 0) {
+            params.put("sort", sortOrder);
+        }
+
+        String beginDate = getBeginDate();
+        if (!TextUtils.isEmpty(beginDate)) {
+            params.put("begin_date", beginDate);
+        }
+
+        String endDate = getEndDate();
+        if (!TextUtils.isEmpty(beginDate)) {
+            params.put("end_date", endDate);
+        }
+
+        if (page == 0) {
+            mArticles.clear();
+            mAdapter.notifyDataSetChanged();
+            Log.d(LOG_TAG, "Starting page 0, adapter count = " + mAdapter.getItemCount());
+        }
+
+        Log.d(LOG_TAG, "url: " + url);
+        Log.d(LOG_TAG, "params: " + params);
         client.get(url, params, new JsonHttpResponseHandler() {
             @Override
             public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
@@ -115,6 +148,7 @@ public class SearchActivity extends AppCompatActivity {
                     articleJsonResults = response.getJSONObject("response").getJSONArray("docs");
                     mArticles.addAll(Article.fromJsonArray(articleJsonResults));
                     mAdapter.notifyDataSetChanged();
+                    Log.d(LOG_TAG, "After adding page " + page + ", adapter count = " + mAdapter.getItemCount());
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
@@ -128,6 +162,44 @@ public class SearchActivity extends AppCompatActivity {
 
     }
 
+    private String getNewsDesks() {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        Set<String> newsDesks = prefs.getStringSet(getString(R.string.pref_key_newsdesk), null);
+        Log.d(LOG_TAG, "newsdesks: " + newsDesks.toString());
+        if (newsDesks == null) {
+            return null;
+        }
+        StringBuilder stringBuilder = new StringBuilder();
+        for (String str : newsDesks) {
+            stringBuilder.append('"');
+            stringBuilder.append(str);
+            stringBuilder.append("\" ");
+        }
+        return stringBuilder.toString();
+    }
+
+    private String getSortOrder() {
+        return getPrefString(R.string.pref_key_sortorder);
+    }
+
+    private String getBeginDate() {
+        return getPrefString(R.string.pref_key_begindate);
+    }
+
+    private String getEndDate() {
+        return getPrefString(R.string.pref_key_enddate);
+    }
+
+    private String getPrefString(String prefKey) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        return prefs.getString(prefKey, null);
+    }
+
+    private String getPrefString(int prefKey) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        return prefs.getString(getString(prefKey), null);
+    }
+
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle action bar item clicks here. The action bar will
@@ -138,6 +210,10 @@ public class SearchActivity extends AppCompatActivity {
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_search) {
             return true;
+        }
+
+        if (id == R.id.action_settings) {
+            startActivity(new Intent(this, SettingsActivity.class));
         }
 
         return super.onOptionsItemSelected(item);
