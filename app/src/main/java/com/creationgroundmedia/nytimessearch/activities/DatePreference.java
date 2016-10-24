@@ -18,12 +18,10 @@ package com.creationgroundmedia.nytimessearch.activities;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.content.res.TypedArray;
 import android.preference.DialogPreference;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.DatePicker;
@@ -34,7 +32,8 @@ import com.creationgroundmedia.nytimessearch.R;
 import cz.msebera.android.httpclient.util.TextUtils;
 
 /**
- * Created by geo on 10/19/16.
+ * Created by George Cohn III on 10/19/16.
+ * Custom dialog for dates using a DatePicker
  */
 
 public class DatePreference extends DialogPreference {
@@ -48,13 +47,16 @@ public class DatePreference extends DialogPreference {
         super(context, attrs);
         mContext = context;
         mKey = extractString(attrs.getAttributeValue("http://schemas.android.com/apk/res/android", "key"));
-        Log.d(LOG_TAG, "constructor, key = " + mKey);
+//        Log.d(LOG_TAG, "constructor, key = " + mKey);
     }
 
     private String extractString(String str) {
-        if (TextUtils.isEmpty(str)) return str;
-        if (str.charAt(0) == '@') {
-            str = mContext.getString(Integer.parseInt(str.substring(1)));
+        // had to do this because we don't know if the xml contains a hard coded string
+        // or a reference to strings.xml
+        if (!TextUtils.isEmpty(str)) {
+            if (str.charAt(0) == '@') {
+                str = mContext.getString(Integer.parseInt(str.substring(1)));
+            }
         }
         return str;
     }
@@ -62,19 +64,18 @@ public class DatePreference extends DialogPreference {
 
     @Override
     protected void onBindView(View view) {
-        Log.d(LOG_TAG, "onBindView()");
+//        Log.d(LOG_TAG, "onBindView()");
         mTvDisplayDate = (TextView) view.findViewById(R.id.display_date);
         String date = getPref();
         if (!TextUtils.isEmpty(date)) {
             mTvDisplayDate.setText(displayDate(getYear(date), getMonth(date), getDay(date)));
         }
         super.onBindView(view);
-
     }
 
     @Override
     protected void onBindDialogView(View view) {
-        Log.d(LOG_TAG, "onBindDialogView()");
+//        Log.d(LOG_TAG, "onBindDialogView()");
         mDatePicker = (DatePicker) view.findViewById(R.id.date_picker);
         String date = getPref();
         if (!TextUtils.isEmpty(date)) {
@@ -85,20 +86,15 @@ public class DatePreference extends DialogPreference {
 
     @Override
     protected View onCreateView(ViewGroup parent) {
-        Log.d(LOG_TAG, "onCreateView()");
+//        Log.d(LOG_TAG, "onCreateView()");
+        // we want a negative response to cause the date to be cleared, not simply reverted
         setNegativeButtonText("Clear");
         return super.onCreateView(parent);
     }
 
     @Override
-    protected View onCreateDialogView() {
-        Log.d(LOG_TAG, "onCreateDialogView()");
-        return super.onCreateDialogView();
-    }
-
-    @Override
     protected void onDialogClosed(boolean positiveResult) {
-        Log.d(LOG_TAG, "onDialogClosed(" + positiveResult + ")");
+//        Log.d(LOG_TAG, "onDialogClosed(" + positiveResult + ")");
         if (positiveResult) {
             int year = mDatePicker.getYear();
             int month = mDatePicker.getMonth() + 1;
@@ -120,22 +116,10 @@ public class DatePreference extends DialogPreference {
         return String.format("%04d%02d%02d", year, month, day);
     }
 
-    @Override
-    protected Object onGetDefaultValue(TypedArray a, int index) {
-        Log.d(LOG_TAG, "onGetDefaultValue()");
-        return super.onGetDefaultValue(a, index);
-    }
-
-    @Override
-    protected void onSetInitialValue(boolean restorePersistedValue, Object defaultValue) {
-        Log.d(LOG_TAG, "onSetInitialValue()");
-        super.onSetInitialValue(restorePersistedValue, defaultValue);
-    }
-
     private String getPref() {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(mContext);
         String date = prefs.getString(mKey, null);
-        Log.d(LOG_TAG, "getPref got " + date);
+//        Log.d(LOG_TAG, "getPref got " + date);
         return date;
     }
     private void setPref(String date) {
@@ -143,7 +127,7 @@ public class DatePreference extends DialogPreference {
                 .edit();
         editor.putString(mKey, date);
         editor.commit();
-        Log.d(LOG_TAG, "setPref(" + date + ")");
+//        Log.d(LOG_TAG, "setPref(" + date + ")");
     }
 
     private int getDay(@NonNull String date) {

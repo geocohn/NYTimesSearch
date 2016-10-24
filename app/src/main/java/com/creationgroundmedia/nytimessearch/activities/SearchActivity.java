@@ -28,7 +28,6 @@ import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.SearchView;
 import android.support.v7.widget.StaggeredGridLayoutManager;
 import android.support.v7.widget.Toolbar;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 
@@ -116,6 +115,9 @@ public class SearchActivity extends AppCompatActivity {
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
+        // we'll end up doing a brand new search (and losing our place) every time the user
+        // rotates the device.  the right way to do this would be to persist all the search data
+        // so far, and also the current position in the view.
         outState.putString(QUERY_STRING, mQueryString);
         super.onSaveInstanceState(outState);
     }
@@ -129,6 +131,7 @@ public class SearchActivity extends AppCompatActivity {
         params.put("q", query);
         String newsDesks = getNewsDesks();
         if (!TextUtils.isEmpty(newsDesks)) {
+            // params.put("fq", "news_desk:(\"Fashion & Style\")");
             params.put("fq", "news_desk:(" + newsDesks + ")");
         }
 
@@ -150,11 +153,11 @@ public class SearchActivity extends AppCompatActivity {
         if (page == 0) {
             mArticles.clear();
             mAdapter.notifyDataSetChanged();
-            Log.d(LOG_TAG, "Starting page 0, adapter count = " + mAdapter.getItemCount());
+//            Log.d(LOG_TAG, "Starting page 0, adapter count = " + mAdapter.getItemCount());
         }
 
-        Log.d(LOG_TAG, "url: " + url);
-        Log.d(LOG_TAG, "params: " + params);
+//        Log.d(LOG_TAG, "url: " + url);
+//        Log.d(LOG_TAG, "params: " + params);
         client.get(url, params, new JsonHttpResponseHandler() {
             @Override
             public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
@@ -164,7 +167,7 @@ public class SearchActivity extends AppCompatActivity {
                     articleJsonResults = response.getJSONObject("response").getJSONArray("docs");
                     mArticles.addAll(Article.fromJsonArray(articleJsonResults));
                     mAdapter.notifyDataSetChanged();
-                    Log.d(LOG_TAG, "After adding page " + page + ", adapter count = " + mAdapter.getItemCount());
+//                    Log.d(LOG_TAG, "After adding page " + page + ", adapter count = " + mAdapter.getItemCount());
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
@@ -181,15 +184,18 @@ public class SearchActivity extends AppCompatActivity {
     private String getNewsDesks() {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         Set<String> newsDesks = prefs.getStringSet(getString(R.string.pref_key_newsdesk), null);
-        Log.d(LOG_TAG, "newsdesks: " + newsDesks.toString());
+//        Log.d(LOG_TAG, "newsdesks: " + newsDesks.toString());
         if (newsDesks == null) {
             return null;
         }
         StringBuilder stringBuilder = new StringBuilder();
         for (String str : newsDesks) {
-            stringBuilder.append('"');
+            if (stringBuilder.length() != 0) {
+                stringBuilder.append(' ');
+            }
+            stringBuilder.append("\\\"");
             stringBuilder.append(str);
-            stringBuilder.append("\" ");
+            stringBuilder.append("\\\"");
         }
         return stringBuilder.toString();
     }
